@@ -1,0 +1,17 @@
+{
+  "name": "parallax-dtl",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "CTF ParallaxDTL: settlement C entre celdas de liquidez con tests JS.",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node scripts/build.mjs && node --test --test-concurrency=1 tests/node/*.test.js",
+    "test:ctf": "node --test tests/node/exploit.test.js",
+    "ci": "node scripts/build.mjs && node --test --test-concurrency=1 tests/node/*.test.js && node scripts/check-loc.mjs",
+    "loc": "node scripts/check-loc.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
