@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -32,7 +32,10 @@ for (const dir of roots) {
   walk(join(root, dir), files);
 }
 for (const file of docs) {
-  files.push(join(root, file));
+  const full = join(root, file);
+  if (existsSync(full)) {
+    files.push(full);
+  }
 }
 
 let total = 0;
