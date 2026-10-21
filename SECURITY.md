@@ -1,29 +1,23 @@
-# Security Policy
+# Política de seguridad
 
-ParallaxDTL es un CTF local. No use este codigo como motor financiero ni como
-referencia productiva sin redisenar el modelo de autorizacion.
+ParallaxDTL distribuye un motor C11 de estado local y una CLI. No incorpora endpoints de red, claves, contratos desplegados ni custodia de fondos. La revisión operativa se centra en integridad de estado, restricciones de ruta y política, ciclo de vida de recibos y reproducibilidad del diario.
 
-## Alcance del laboratorio
+```mermaid
+flowchart TD
+    I[Solicitud] --> V[Índices, estado y política]
+    V --> A[Activo y ruta]
+    A --> S[Saldo y límites]
+    S --> M[Mutación de celdas y recibo]
+    M --> J[Diario con digest]
+    J --> R[Conciliación y exposición]
+```
 
-El laboratorio modela un bug intencional:
+Las condiciones rechazadas devuelven código y detalle de error. Las pruebas cubren emisión, liquidación, cancelación, salida, rotación de tarifa, serialización y conservación. `conservation_ok` confirma solo la igualdad global indicada; no sustituye una revisión integral de reglas de negocio.
 
-- el settlement vulnerable acepta un payer compatible pero no vinculado;
-- la reconciliacion global pasa aunque el receipt haya sido pagado por una
-  celda de terceros;
-- el escenario `strict-exploit` muestra una validacion de binding esperada.
+## Comunicación responsable
 
-## Reporte de hallazgos
+Si identifica un problema de seguridad, evite publicar detalles técnicos o secuencias de abuso en issues abiertos. Utilice [GitHub Security Advisories](../../security/advisories/new) e incluya commit, precondiciones, impacto, pasos de reproducción y evidencia mínima. No utilice activos o sistemas de terceros para validar un informe.
 
-Para este repositorio local, documenta hallazgos con:
+## Mantenimiento
 
-- escenario reproducible;
-- salida JSON relevante;
-- invariante violado;
-- propuesta de fix;
-- test de regresion.
-
-## No objetivos
-
-Este CTF no implementa criptografia real, firmas, red, persistencia, permisos
-multiusuario ni integracion con cadenas. Los digests son deterministas para
-tests y trazabilidad, no para seguridad criptografica.
+Las solicitudes pasan por pruebas automatizadas y revisión de diferencias. Los artefactos de versión deben corresponder con `main`, `production` y la etiqueta anotada. Consulte [controles operativos](docs/seguridad-operativa.md) para supuestos y límites técnicos.

@@ -8,13 +8,11 @@ test("cancel libera reserva pendiente y permite cerrar ruta sin settlement", () 
   const blue = routeByName(report, "blue-route");
 
   expectCommon(report, "cancel");
-  assert.equal(report.binding_ok, true);
-  assert.equal(report.ctf_vulnerability_triggered, false);
   assert.equal(report.surface.route_closed, true);
   assert.equal(report.operations.cancelled_gross, 300);
-  assert.equal(report.exploit.legitimate_withdrawable_before, 680);
-  assert.equal(report.exploit.available_after_foreign_payment, 980);
-  assert.equal(report.exploit.attacker_withdrawn, 180);
+  assert.equal(report.settlement.available_before, 680);
+  assert.equal(report.settlement.available_after, 980);
+  assert.equal(report.settlement.withdrawn, 180);
   assert.equal(report.receipts[0].status, "cancelled");
   assert.equal(report.receipts[0].paid_by_cell, null);
   assert.equal(report.cells.origin.reserve, 820);

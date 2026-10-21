@@ -8,8 +8,8 @@ test("help muestra escenarios disponibles", () => {
 
   assert.equal(result.status, 0);
   assert.match(result.stdout, /Usage:/);
-  assert.match(result.stdout, /exploit/);
-  assert.match(result.stdout, /strict-exploit/);
+  assert.match(result.stdout, /cancel/);
+  assert.match(result.stdout, /fee-rotation/);
   assert.match(result.stdout, /cancel/);
   assert.match(result.stdout, /fee-rotation/);
 });

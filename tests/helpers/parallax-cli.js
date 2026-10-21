@@ -95,7 +95,7 @@ export function expectDigest(value) {
 
 export function expectCommon(report, scenario) {
   assert.equal(report.scenario, scenario);
-  assert.equal(report.network_id, "parallax-localnet-ctf");
+  assert.equal(report.network_id, "parallax-settlement-v1");
   assert.equal(report.conservation_ok, true);
   assert.equal(report.totals.global_ok, true);
   assert.equal(report.surface.policies, 2);

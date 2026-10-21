@@ -1,5 +1,5 @@
 CC ?= gcc
-CFLAGS ?= -std=c11 -Wall -Wextra -Wpedantic -O2
+CFLAGS ?= -std=c11 -Wall -Wextra -Wpedantic -Werror -O2
 CPPFLAGS ?= -Isrc
 BUILD_DIR := build
 TARGET := $(BUILD_DIR)/parallaxdtl

@@ -28,7 +28,7 @@ static PdtlErrorCode pdtl_setup_surface(PdtlLedger *ledger, PdtlScenarioCells *c
 {
     PdtlErrorCode err;
 
-    pdtl_init(ledger, "parallax-localnet-ctf");
+    pdtl_init(ledger, "parallax-settlement-v1");
     memset(cells, 0, sizeof(*cells));
     cells->treasury = PDTL_NO_INDEX;
     cells->origin = PDTL_NO_INDEX;
@@ -146,106 +146,26 @@ static PdtlErrorCode pdtl_run_flow(PdtlLedger *ledger, PdtlScenarioResult *resul
         return err;
     }
     result->receipt = receipt;
-    result->legitimate_withdrawable_before = pdtl_cell_available(ledger, cells.origin);
+    result->available_before = pdtl_cell_available(ledger, cells.origin);
 
-    err = pdtl_settle_receipt_vulnerable(ledger, receipt, cells.origin);
+    err = pdtl_settle_receipt(ledger, receipt, cells.origin);
     if (err != PDTL_OK) {
         return err;
     }
     result->settlement_accepted = 1;
-    result->third_party_paid = 0;
-    result->available_after_foreign_payment = pdtl_cell_available(ledger, cells.origin);
+    result->available_after = pdtl_cell_available(ledger, cells.origin);
 
     err = pdtl_withdraw(ledger, cells.origin, 280, "operator withdrawal after normal settlement");
     if (err != PDTL_OK) {
         return err;
     }
-    result->attacker_withdrawn = 280;
+    result->withdrawn = 280;
 
     err = pdtl_close_route(ledger, "blue-route");
     if (err != PDTL_OK) {
         return err;
     }
     result->route_closed = 1;
-    return PDTL_OK;
-}
-
-static PdtlErrorCode pdtl_run_exploit(PdtlLedger *ledger, PdtlScenarioResult *result)
-{
-    PdtlScenarioCells cells;
-    PdtlErrorCode err = pdtl_setup_surface(ledger, &cells);
-    uint32_t receipt;
-    PdtlAmount available_after;
-
-    if (err != PDTL_OK) {
-        return err;
-    }
-    pdtl_capture_cells(result, &cells);
-
-    err = pdtl_issue_receipt(ledger, cells.origin, cells.beneficiary, 700, 777, &receipt);
-    if (err != PDTL_OK) {
-        return err;
-    }
-    result->receipt = receipt;
-    result->legitimate_withdrawable_before = pdtl_cell_available(ledger, cells.origin);
-
-    err = pdtl_settle_receipt_vulnerable(ledger, receipt, cells.sponsor);
-    if (err != PDTL_OK) {
-        return err;
-    }
-    result->settlement_accepted = 1;
-    result->third_party_paid = 700;
-    available_after = pdtl_cell_available(ledger, cells.origin);
-    result->available_after_foreign_payment = available_after;
-    if (available_after > result->legitimate_withdrawable_before) {
-        result->excess_withdrawal = available_after - result->legitimate_withdrawable_before;
-    }
-
-    err = pdtl_withdraw(ledger, cells.origin, available_after, "withdraw released surplus after foreign payment");
-    if (err != PDTL_OK) {
-        return err;
-    }
-    result->attacker_withdrawn = available_after;
-
-    err = pdtl_close_route(ledger, "blue-route");
-    if (err != PDTL_OK) {
-        return err;
-    }
-    result->route_closed = 1;
-    return PDTL_OK;
-}
-
-static PdtlErrorCode pdtl_run_strict_exploit(PdtlLedger *ledger, PdtlScenarioResult *result)
-{
-    PdtlScenarioCells cells;
-    PdtlErrorCode err = pdtl_setup_surface(ledger, &cells);
-    uint32_t receipt;
-
-    if (err != PDTL_OK) {
-        return err;
-    }
-    pdtl_capture_cells(result, &cells);
-
-    err = pdtl_issue_receipt(ledger, cells.origin, cells.beneficiary, 700, 778, &receipt);
-    if (err != PDTL_OK) {
-        return err;
-    }
-    result->receipt = receipt;
-    result->legitimate_withdrawable_before = pdtl_cell_available(ledger, cells.origin);
-
-    err = pdtl_settle_receipt_strict(ledger, receipt, cells.sponsor);
-    if (err == PDTL_ERR_BINDING) {
-        result->settlement_accepted = 0;
-        result->strict_rejection = 1;
-        result->third_party_paid = 0;
-        result->available_after_foreign_payment = pdtl_cell_available(ledger, cells.origin);
-        pdtl_clear_error(ledger);
-        return PDTL_OK;
-    }
-    if (err != PDTL_OK) {
-        return err;
-    }
-    result->settlement_accepted = 1;
     return PDTL_OK;
 }
 
@@ -266,7 +186,7 @@ static PdtlErrorCode pdtl_run_cancel(PdtlLedger *ledger, PdtlScenarioResult *res
         return err;
     }
     result->receipt = receipt;
-    result->legitimate_withdrawable_before = pdtl_cell_available(ledger, cells.origin);
+    result->available_before = pdtl_cell_available(ledger, cells.origin);
 
     err = pdtl_cancel_receipt(ledger, receipt, "merchant timeout released origin reserve");
     if (err != PDTL_OK) {
@@ -274,13 +194,13 @@ static PdtlErrorCode pdtl_run_cancel(PdtlLedger *ledger, PdtlScenarioResult *res
     }
     result->cancelled_gross = 300;
     available_after_cancel = pdtl_cell_available(ledger, cells.origin);
-    result->available_after_foreign_payment = available_after_cancel;
+    result->available_after = available_after_cancel;
 
     err = pdtl_withdraw(ledger, cells.origin, 180, "post-cancel operator withdrawal");
     if (err != PDTL_OK) {
         return err;
     }
-    result->attacker_withdrawn = 180;
+    result->withdrawn = 180;
 
     err = pdtl_close_route(ledger, "blue-route");
     if (err != PDTL_OK) {
@@ -314,14 +234,14 @@ static PdtlErrorCode pdtl_run_fee_rotation(PdtlLedger *ledger, PdtlScenarioResul
         return err;
     }
     result->receipt = receipt;
-    result->legitimate_withdrawable_before = pdtl_cell_available(ledger, cells.sponsor);
+    result->available_before = pdtl_cell_available(ledger, cells.sponsor);
 
-    err = pdtl_settle_receipt_strict(ledger, receipt, cells.sponsor);
+    err = pdtl_settle_receipt(ledger, receipt, cells.sponsor);
     if (err != PDTL_OK) {
         return err;
     }
     result->settlement_accepted = 1;
-    result->available_after_foreign_payment = pdtl_cell_available(ledger, cells.sponsor);
+    result->available_after = pdtl_cell_available(ledger, cells.sponsor);
     return PDTL_OK;
 }
 
@@ -344,12 +264,6 @@ PdtlErrorCode pdtl_run_scenario(
         (void)snprintf(result->scenario, sizeof(result->scenario), "flow");
         return pdtl_run_flow(ledger, result);
     }
-    if (strcmp(name, "exploit") == 0) {
-        return pdtl_run_exploit(ledger, result);
-    }
-    if (strcmp(name, "strict-exploit") == 0) {
-        return pdtl_run_strict_exploit(ledger, result);
-    }
     if (strcmp(name, "cancel") == 0) {
         return pdtl_run_cancel(ledger, result);
     }
@@ -357,7 +271,7 @@ PdtlErrorCode pdtl_run_scenario(
         return pdtl_run_fee_rotation(ledger, result);
     }
 
-    pdtl_init(ledger, "parallax-localnet-ctf");
+    pdtl_init(ledger, "parallax-settlement-v1");
     return pdtl_set_error(ledger, PDTL_ERR_ARGUMENT, "unknown scenario");
 }
 
@@ -419,7 +333,6 @@ static void pdtl_print_receipts(PdtlJson *json, const PdtlLedger *ledger)
         pdtl_json_prop_string(json, "status", pdtl_receipt_status_name(receipt->status));
         pdtl_json_prop_string(json, "route_digest", receipt->route_digest);
         pdtl_json_prop_string(json, "digest", digest);
-        pdtl_json_prop_bool(json, "payer_matches_origin", receipt->paid_by_cell == receipt->origin_cell);
         pdtl_json_end_object(json);
     }
     pdtl_json_end_array(json);
@@ -512,7 +425,6 @@ void pdtl_print_report(FILE *out, const PdtlLedger *ledger, const PdtlScenarioRe
     PdtlJson json;
     char state_digest[PDTL_DIGEST_LEN];
     int global_ok = pdtl_global_reconciliation_ok(ledger);
-    int binding_ok = pdtl_receipt_bindings_ok(ledger);
 
     pdtl_state_digest(ledger, state_digest);
     pdtl_json_init(&json, out);
@@ -521,8 +433,6 @@ void pdtl_print_report(FILE *out, const PdtlLedger *ledger, const PdtlScenarioRe
     pdtl_json_prop_string(&json, "network_id", ledger->network_id);
     pdtl_json_prop_string(&json, "state_digest", state_digest);
     pdtl_json_prop_bool(&json, "conservation_ok", global_ok);
-    pdtl_json_prop_bool(&json, "binding_ok", binding_ok);
-    pdtl_json_prop_bool(&json, "ctf_vulnerability_triggered", global_ok && !binding_ok);
 
     pdtl_json_prop_object_begin(&json, "surface");
     pdtl_json_prop_u64(&json, "policies", ledger->policy_count);
@@ -541,7 +451,6 @@ void pdtl_print_report(FILE *out, const PdtlLedger *ledger, const PdtlScenarioRe
     pdtl_json_prop_u64(&json, "settled_in", pdtl_total_settled_in(ledger));
     pdtl_json_prop_u64(&json, "settled_out", pdtl_total_settled_out(ledger));
     pdtl_json_prop_bool(&json, "global_ok", global_ok);
-    pdtl_json_prop_bool(&json, "receipt_cell_binding_ok", binding_ok);
     pdtl_json_end_object(&json);
 
     pdtl_json_prop_object_begin(&json, "cells");
@@ -552,15 +461,11 @@ void pdtl_print_report(FILE *out, const PdtlLedger *ledger, const PdtlScenarioRe
     pdtl_print_cell(&json, ledger, "treasury", result->treasury_cell);
     pdtl_json_end_object(&json);
 
-    pdtl_json_prop_object_begin(&json, "exploit");
+    pdtl_json_prop_object_begin(&json, "settlement");
     pdtl_json_prop_bool(&json, "settlement_accepted", result->settlement_accepted);
-    pdtl_json_prop_bool(&json, "strict_rejection", result->strict_rejection);
-    pdtl_json_prop_u64(&json, "legitimate_withdrawable_before", result->legitimate_withdrawable_before);
-    pdtl_json_prop_u64(&json, "available_after_foreign_payment", result->available_after_foreign_payment);
-    pdtl_json_prop_u64(&json, "attacker_withdrawn", result->attacker_withdrawn);
-    pdtl_json_prop_u64(&json, "third_party_paid", result->third_party_paid);
-    pdtl_json_prop_u64(&json, "excess_withdrawal", result->excess_withdrawal);
-    pdtl_json_prop_bool(&json, "payer_matches_receipt_origin", binding_ok);
+    pdtl_json_prop_u64(&json, "available_before", result->available_before);
+    pdtl_json_prop_u64(&json, "available_after", result->available_after);
+    pdtl_json_prop_u64(&json, "withdrawn", result->withdrawn);
     pdtl_json_end_object(&json);
 
     pdtl_json_prop_object_begin(&json, "operations");
@@ -588,8 +493,6 @@ void pdtl_print_usage(FILE *out, const char *program)
     (void)fputs("\nScenarios:\n", out);
     (void)fputs("  flow            normal movement, consolidation, settlement, withdrawal and route close\n", out);
     (void)fputs("  snapshot        initialized liquidity surface without receipts\n", out);
-    (void)fputs("  exploit         vulnerable settlement paid by a foreign cell\n", out);
-    (void)fputs("  strict-exploit  same exploit against strict receipt/cell binding\n", out);
     (void)fputs("  cancel          pending receipt cancellation, withdrawal and route close\n", out);
-    (void)fputs("  fee-rotation    route fee update followed by strict settlement\n", out);
+    (void)fputs("  fee-rotation    route fee update followed by settlement\n", out);
 }

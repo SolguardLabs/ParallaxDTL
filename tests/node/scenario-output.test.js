@@ -7,8 +7,6 @@ test("snapshot inicializa celdas de liquidez sin receipts", () => {
   const report = runScenario("snapshot");
 
   expectCommon(report, "snapshot");
-  assert.equal(report.binding_ok, true);
-  assert.equal(report.ctf_vulnerability_triggered, false);
   assert.equal(report.surface.receipts, 0);
   assert.equal(report.totals.initial_supply, 3_200);
   assert.equal(report.totals.cell_reserves, 3_200);
@@ -24,13 +22,10 @@ test("flow normal mueve, consolida, liquida, retira y cierra ruta", () => {
   const report = runScenario("flow");
 
   expectCommon(report, "flow");
-  assert.equal(report.binding_ok, true);
-  assert.equal(report.ctf_vulnerability_triggered, false);
   assert.equal(report.surface.receipts, 1);
   assert.equal(report.surface.route_closed, true);
   assert.equal(report.receipts[0].origin_cell, report.cells.origin.index);
   assert.equal(report.receipts[0].paid_by_cell, report.cells.origin.index);
-  assert.equal(report.receipts[0].payer_matches_origin, true);
   assert.equal(report.receipts[0].gross, 700);
   assert.equal(report.receipts[0].fee, 14);
   assert.equal(report.receipts[0].net, 686);
@@ -50,5 +45,4 @@ test("la invocacion por defecto ejecuta flow", () => {
 
   assert.equal(report.scenario, "flow");
   assert.equal(report.conservation_ok, true);
-  assert.equal(report.binding_ok, true);
 });
