@@ -18,7 +18,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git fetch origin main production --tags
+          git fetch --force origin main production --tags
           test "$(git cat-file -t v1.0.0)" = tag
           main_commit="$(git rev-parse origin/main)"
           production_commit="$(git rev-parse origin/production)"
