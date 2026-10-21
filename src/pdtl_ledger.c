@@ -5,13 +5,20 @@
 
 static void pdtl_copy_string(char *dst, size_t cap, const char *src)
 {
+    size_t len;
+
     if (cap == 0) {
         return;
     }
     if (src == NULL) {
         src = "";
     }
-    (void)snprintf(dst, cap, "%s", src);
+    len = strlen(src);
+    if (len >= cap) {
+        len = cap - 1;
+    }
+    memmove(dst, src, len);
+    dst[len] = '\0';
 }
 
 static int pdtl_string_eq(const char *left, const char *right)
@@ -601,7 +608,7 @@ static PdtlErrorCode pdtl_validate_settlement_shape(
             return pdtl_set_error(ledger, PDTL_ERR_BALANCE, "origin cell cannot cover its reserved receipt");
         }
     } else if (pdtl_cell_available(ledger, paying_cell) < receipt->gross) {
-        return pdtl_set_error(ledger, PDTL_ERR_BALANCE, "foreign paying cell cannot cover receipt");
+        return pdtl_set_error(ledger, PDTL_ERR_BALANCE, "paying cell cannot cover receipt");
     }
     return PDTL_OK;
 }
@@ -669,28 +676,7 @@ static PdtlErrorCode pdtl_apply_settlement(
     return PDTL_OK;
 }
 
-PdtlErrorCode pdtl_settle_receipt_vulnerable(
-    PdtlLedger *ledger,
-    uint32_t receipt_index,
-    uint32_t paying_cell)
-{
-    PdtlReceipt *receipt = pdtl_get_receipt(ledger, receipt_index);
-    PdtlCell *payer = pdtl_get_cell(ledger, paying_cell);
-    PdtlErrorCode shape;
-
-    /*
-     * CTF bug: the final reconciliation validates that some compatible cell
-     * pays the receipt and that global reserves are conserved. It does not
-     * require the paying cell to be the same cell that generated the receipt.
-     */
-    shape = pdtl_validate_settlement_shape(ledger, receipt, payer, paying_cell);
-    if (shape != PDTL_OK) {
-        return shape;
-    }
-    return pdtl_apply_settlement(ledger, receipt, paying_cell);
-}
-
-PdtlErrorCode pdtl_settle_receipt_strict(
+PdtlErrorCode pdtl_settle_receipt(
     PdtlLedger *ledger,
     uint32_t receipt_index,
     uint32_t paying_cell)
@@ -702,19 +688,6 @@ PdtlErrorCode pdtl_settle_receipt_strict(
     shape = pdtl_validate_settlement_shape(ledger, receipt, payer, paying_cell);
     if (shape != PDTL_OK) {
         return shape;
-    }
-    if (receipt->origin_cell != paying_cell) {
-        (void)pdtl_append_journal(
-            ledger,
-            PDTL_EVENT_SETTLEMENT_REJECTED,
-            paying_cell,
-            receipt->origin_cell,
-            receipt_index,
-            receipt->gross,
-            payer->reserve,
-            payer->reserve,
-            "strict binding rejected foreign payer");
-        return pdtl_set_error(ledger, PDTL_ERR_BINDING, "paying cell does not match receipt origin");
     }
     return pdtl_apply_settlement(ledger, receipt, paying_cell);
 }
@@ -1047,17 +1020,4 @@ int pdtl_global_reconciliation_ok(const PdtlLedger *ledger)
     PdtlAmount left = pdtl_total_cell_reserves(ledger) + ledger->external_withdrawals + ledger->burned_after_genesis;
     PdtlAmount right = ledger->initial_supply + ledger->minted_after_genesis;
     return left == right;
-}
-
-int pdtl_receipt_bindings_ok(const PdtlLedger *ledger)
-{
-    size_t i;
-
-    for (i = 0; i < ledger->receipt_count; i++) {
-        const PdtlReceipt *receipt = &ledger->receipts[i];
-        if (receipt->status == PDTL_RECEIPT_SETTLED && receipt->paid_by_cell != receipt->origin_cell) {
-            return 0;
-        }
-    }
-    return 1;
 }

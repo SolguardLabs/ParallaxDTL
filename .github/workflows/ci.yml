@@ -2,6 +2,8 @@ name: ci
 
 on:
   push:
+    branches: [main, production]
+    tags: ["v*"]
   pull_request:
 
 jobs:
@@ -12,5 +14,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
-      - run: npm install
-      - run: npm run ci
+      - run: bash scripts/ci.sh

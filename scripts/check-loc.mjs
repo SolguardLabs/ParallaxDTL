@@ -1,54 +1,30 @@
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
-const roots = ["src", "tests", "scripts"];
-const docs = ["README.md", "vulnerability.md", "SECURITY.md", "Makefile", "package.json"];
-const extensions = new Set([".c", ".h", ".js", ".mjs", ".md"]);
+const textExtensions = new Set([
+  ".c", ".h", ".js", ".mjs", ".md", ".json", ".yml", ".yaml", ".sh",
+]);
+const textNames = new Set([
+  "Makefile", "LICENSE", ".editorconfig", ".gitignore", ".gitattributes",
+]);
 
-function extension(path) {
-  const index = path.lastIndexOf(".");
-  return index === -1 ? "" : path.slice(index);
-}
-
-function walk(path, output) {
-  for (const entry of readdirSync(path)) {
-    if (entry === "build" || entry === "node_modules") {
-      continue;
-    }
-    const full = join(path, entry);
-    const stat = statSync(full);
-    if (stat.isDirectory()) {
-      walk(full, output);
-    } else if (extensions.has(extension(full))) {
-      output.push(full);
-    }
-  }
-}
-
-const files = [];
-for (const dir of roots) {
-  walk(join(root, dir), files);
-}
-for (const file of docs) {
-  const full = join(root, file);
-  if (existsSync(full)) {
-    files.push(full);
-  }
-}
+const files = execFileSync("git", ["ls-files", "-z"], { cwd: root })
+  .toString("utf8")
+  .split("\0")
+  .filter(Boolean)
+  .filter((path) => textExtensions.has(extname(path)) || textNames.has(path))
+  .filter((path) => existsSync(join(root, path)))
+  .sort();
 
 let total = 0;
-const rows = [];
-for (const file of files) {
-  const content = readFileSync(file, "utf8");
-  const lines = content.length === 0 ? 0 : content.split(/\r?\n/).length;
-  total += lines;
-  rows.push({ file: relative(root, file), lines });
+for (const path of files) {
+  const source = readFileSync(join(root, path), "utf8");
+  const count = source.split(/\r?\n/).filter((line) => line.trim().length > 0).length;
+  total += count;
+  console.log(`${String(count).padStart(5)} ${path}`);
 }
 
-rows.sort((a, b) => a.file.localeCompare(b.file));
-for (const row of rows) {
-  console.log(`${String(row.lines).padStart(5, " ")} ${row.file}`);
-}
-console.log(`${String(total).padStart(5, " ")} total`);
+console.log(`${String(total).padStart(5)} nonblank lines in ${files.length} versioned text files`);

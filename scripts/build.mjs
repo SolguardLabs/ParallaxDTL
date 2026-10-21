@@ -44,6 +44,7 @@ function compileHost(compiler) {
     "-Wall",
     "-Wextra",
     "-Wpedantic",
+    "-Werror",
     "-O2",
     "-Isrc",
     ...src,
@@ -109,7 +110,7 @@ function compileWsl() {
   const command = [
     `cd ${shQuote(unixRoot)}`,
     "mkdir -p build",
-    `gcc -std=c11 -Wall -Wextra -Wpedantic -O2 -Isrc ${src.map(shQuote).join(" ")} -o build/parallaxdtl`,
+    `gcc -std=c11 -Wall -Wextra -Wpedantic -Werror -O2 -Isrc ${src.map(shQuote).join(" ")} -o build/parallaxdtl`,
   ].join(" && ");
   const result = run("wsl.exe", ["--exec", "sh", "-lc", command]);
   if (result.status !== 0) {

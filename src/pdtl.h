@@ -199,17 +199,14 @@ typedef struct PdtlScenarioResult {
     uint32_t treasury_cell;
     uint32_t receipt;
     uint32_t secondary_receipt;
-    PdtlAmount legitimate_withdrawable_before;
-    PdtlAmount available_after_foreign_payment;
-    PdtlAmount attacker_withdrawn;
-    PdtlAmount third_party_paid;
-    PdtlAmount excess_withdrawal;
+    PdtlAmount available_before;
+    PdtlAmount available_after;
+    PdtlAmount withdrawn;
     PdtlAmount cancelled_gross;
     uint32_t fee_before_bps;
     uint32_t fee_after_bps;
     int fee_update_applied;
     int settlement_accepted;
-    int strict_rejection;
     int route_closed;
 } PdtlScenarioResult;
 
@@ -266,11 +263,7 @@ PdtlErrorCode pdtl_issue_receipt(
     PdtlAmount gross,
     uint64_t nonce,
     uint32_t *out_receipt);
-PdtlErrorCode pdtl_settle_receipt_vulnerable(
-    PdtlLedger *ledger,
-    uint32_t receipt_index,
-    uint32_t paying_cell);
-PdtlErrorCode pdtl_settle_receipt_strict(
+PdtlErrorCode pdtl_settle_receipt(
     PdtlLedger *ledger,
     uint32_t receipt_index,
     uint32_t paying_cell);
@@ -313,7 +306,6 @@ PdtlErrorCode pdtl_route_exposure(
     const char *route_name,
     PdtlRouteExposure *out);
 int pdtl_global_reconciliation_ok(const PdtlLedger *ledger);
-int pdtl_receipt_bindings_ok(const PdtlLedger *ledger);
 int pdtl_route_has_pending_receipts(const PdtlLedger *ledger, const char *route_name);
 
 PdtlErrorCode pdtl_append_journal(

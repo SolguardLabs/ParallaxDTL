@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { expectDigest, routeByName, runScenario } from "../helpers/parallax-cli.js";
 
-const scenarios = ["snapshot", "flow", "exploit", "strict-exploit", "cancel", "fee-rotation"];
+const scenarios = ["snapshot", "flow", "cancel", "fee-rotation"];
 
 test("todos los escenarios reportan la ecuacion de reconciliacion global", () => {
   for (const name of scenarios) {
@@ -22,7 +22,7 @@ test("todos los escenarios reportan la ecuacion de reconciliacion global", () =>
 });
 
 test("los digests de celdas y receipts mantienen formato estable", () => {
-  const report = runScenario("exploit");
+  const report = runScenario("flow");
   const blue = routeByName(report, "blue-route");
 
   expectDigest(report.state_digest);
@@ -33,35 +33,6 @@ test("los digests de celdas y receipts mantienen formato estable", () => {
   expectDigest(report.receipts[0].digest);
   expectDigest(report.receipts[0].route_digest);
   expectDigest(blue.digest);
-});
-
-test("la celda origen cambia solo en reserved_out cuando strict binding rechaza", () => {
-  const report = runScenario("strict-exploit");
-
-  assert.equal(report.cells.origin.reserve, 1_000);
-  assert.equal(report.cells.origin.reserved_out, 700);
-  assert.equal(report.cells.origin.available, 280);
-  assert.equal(report.cells.origin.withdrawn, 0);
-  assert.equal(report.cells.sponsor.reserve, 2_000);
-  assert.equal(report.cells.sponsor.settled_out, 0);
-  assert.equal(report.totals.reserved_out, 700);
-});
-
-test("el exploit y el camino estricto solo difieren en binding y efectos derivados", () => {
-  const exploit = runScenario("exploit");
-  const strict = runScenario("strict-exploit");
-
-  assert.equal(exploit.receipts[0].gross, strict.receipts[0].gross);
-  assert.equal(exploit.receipts[0].fee, strict.receipts[0].fee);
-  assert.equal(exploit.receipts[0].net, strict.receipts[0].net);
-  assert.equal(exploit.receipts[0].origin_cell, strict.receipts[0].origin_cell);
-  assert.equal(exploit.receipts[0].beneficiary_cell, strict.receipts[0].beneficiary_cell);
-  assert.equal(exploit.binding_ok, false);
-  assert.equal(strict.binding_ok, true);
-  assert.equal(exploit.cells.sponsor.reserve, 1_300);
-  assert.equal(strict.cells.sponsor.reserve, 2_000);
-  assert.equal(exploit.cells.origin.withdrawn, 980);
-  assert.equal(strict.cells.origin.withdrawn, 0);
 });
 
 test("el journal tail conserva eventos suficientes para explicar el estado final", () => {
@@ -77,5 +48,25 @@ test("el journal tail conserva eventos suficientes para explicar el estado final
   assert.equal(blue.pending_gross, 0);
   for (const entry of report.journal_tail) {
     expectDigest(entry.digest);
+  }
+});
+
+test("el mismo escenario produce identidad de estado y secuencia reproducibles", () => {
+  const first = runScenario("fee-rotation");
+  const second = runScenario("fee-rotation");
+
+  assert.equal(first.state_digest, second.state_digest);
+  assert.deepEqual(first.receipts, second.receipts);
+  assert.deepEqual(first.journal_tail, second.journal_tail);
+});
+
+test("la distribución de una liquidación conserva bruto, neto y comisión", () => {
+  for (const name of ["flow", "fee-rotation"]) {
+    const report = runScenario(name);
+    const receipt = report.receipts[0];
+    assert.equal(receipt.gross, receipt.net + receipt.fee);
+    assert.equal(report.cells.beneficiary.settled_in, receipt.net);
+    assert.equal(report.cells.treasury.settled_in, receipt.fee);
+    assert.ok(report.totals.settled_out >= receipt.gross);
   }
 });
